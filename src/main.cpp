@@ -17,10 +17,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::string targetName = "text.exe";
-    std::cout << "Enter target process name: ";
-    std::getline(std::cin, targetName);
-    std::wstring targetNameW(targetName.begin(), targetName.end());
+    
 
     // Opening driver descriptor
     HANDLE hDevice = CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -28,6 +25,11 @@ int main(int argc, char* argv[]) {
         std::cerr << "[-] Error: Could not open driver. GetLastError: " << GetLastError() << "\n";
         return 1;
     }
+
+    std::string targetName = "text.exe";
+    std::cout << "Enter target process name: ";
+    std::getline(std::cin, targetName);
+    std::wstring targetNameW(targetName.begin(), targetName.end());
 
     // Setting target name 
     
