@@ -18,6 +18,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::string targetName = "text.exe";
+    std::cout << "Enter target process name: ";
     std::getline(std::cin, targetName);
     std::wstring targetNameW(targetName.begin(), targetName.end());
 
@@ -47,7 +48,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    (DEBUG == true) ? std::cout << "[+] Shared memory mapped at: " << pBuffer << "\n" : std::cout << std::endl;
+    (DEBUG) ? std::cout << "[+] Shared memory mapped at: " << pBuffer << "\n" : std::cout << std::endl;
 
     ULONG localReadIndex = 0;
     std::cout << "[*] Press Ctrl+C to stop monitoring...\n";
