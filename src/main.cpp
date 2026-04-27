@@ -3,9 +3,20 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <atomic>
 #include "SharedDefines.h"
 
 constexpr auto DEVICE_NAME_PATH = L"C:\\sysmon_link.txt";;
+std::atomic<bool> g_KeepRunning{ true };
+
+BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
+    if (dwCtrlType == CTRL_C_EVENT || dwCtrlType == CTRL_CLOSE_EVENT) {
+        std::wcout << L"\n[!] CTRL+C detected. Stopping monitor and cleaning up...\n";
+        g_KeepRunning = false;
+        return TRUE;
+    }
+    return FALSE;
+}
 
 static bool IsAppRunningAsAdmin();
 std::wstring GetDriverDescriptorName();
@@ -13,10 +24,11 @@ HANDLE OpenDriverDescriptor(std::wstring&);
 std::wstring GetTagetNameFromUser();
 void PrintEvent(const MONITOR_EVENT&);
 
-int main(int argc, char* argv[]) {
+int main() {
 
-    if (!IsAppRunningAsAdmin) {
+    if (!IsAppRunningAsAdmin()) {
         std::wcerr << L"[!] Please restart app with admin privileges [!]" << std::endl;
+        system("pause");
         return 1;
     }
 
@@ -58,6 +70,7 @@ int main(int argc, char* argv[]) {
     if (!SetTargetResult) {
         std::cerr << "[-] Error: Could not set target process name [-]" << std::endl;
         CloseHandle(DriverDescriptorHandle);
+        system("pause");
         return 5;
     }
 
@@ -78,10 +91,19 @@ int main(int argc, char* argv[]) {
     if (!GetMappingOfSharedBufferResult || sharedBuffer == nullptr) {
         std::wcout << L"[-] Failed to map shared memory. Error code: " << GetLastError() << L"\n";
         CloseHandle(DriverDescriptorHandle);
-        return 1;
+        system("pause");
+        return 6;
     }
 
-    while (true) {
+    if (!SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE)) {
+        std::wcerr << L"[-] Failed to set console control handler for CTRL + C event.\n";
+        DeviceIoControl(DriverDescriptorHandle, IOCTL_UNMAP_MEMORY, NULL, 0, NULL, 0, &bytesReturned, NULL);
+        CloseHandle(DriverDescriptorHandle);
+        system("pause");
+        return 7;
+    }
+
+    while (g_KeepRunning) {
 
         if (sharedBuffer->DroppedEvents > 0) {
             std::wcerr << "[-] Buffer overflow detected [-]" << L"\n";
@@ -99,8 +121,9 @@ int main(int argc, char* argv[]) {
         Sleep(5);
     }
 
-    // TODO: somehow check for CTRL + C
+    std::wcout << L"\n[+] Unmapping shared memory...\n";
     DeviceIoControl(DriverDescriptorHandle, IOCTL_UNMAP_MEMORY, NULL, 0, NULL, 0, &bytesReturned, NULL);
+    std::wcout << L"[+] Closing driver handle..." << std::endl;
     CloseHandle(DriverDescriptorHandle);
     return 0;
 }
@@ -237,6 +260,126 @@ void PrintEvent(const MONITOR_EVENT& event) {
             wprintf(L"[FILE] Unkown operation: %ws\n", event.Data.File.FilePath);
             break;
         }
-        // TODO: registry events
+        case ERegistryPreCreateValue: {
+            wprintf(L"[REGISTRY] Wants to create value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
+            break;
+        }
+        case ERegistryPostCreateValue: {
+            if (event.Data.Registry.Status == 0) {
+                wprintf(L"[REGISTRY] Successfully created value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
+            }
+            else {
+                wprintf(L"[REGISTRY] Failed to create value (0x%08X): %ws\\%ws\n", event.Data.Registry.Status, event.Data.Registry.Path, event.Data.Registry.ValueName);
+            }
+            break;
+        }
+        case ERegistryPreSetValue: {
+            wprintf(L"[REGISTRY] Wants to set value: %ws\\%ws", event.Data.Registry.Path, event.Data.Registry.ValueName);
+            if (event.Data.Registry.DataType == REG_DWORD) {
+                wprintf(L" (DWORD: %lu)\n", event.Data.Registry.DwordData);
+            }
+            else if (event.Data.Registry.DataType == REG_SZ || event.Data.Registry.DataType == REG_EXPAND_SZ) {
+                wprintf(L" (STRING: %ws)\n", event.Data.Registry.StringData);
+            }
+            else {
+                wprintf(L" (Type: %lu, Size: %lu bytes)\n", event.Data.Registry.DataType, event.Data.Registry.DataSize);
+            }
+            break;
+        }
+        case ERegistryPostSetValue: {
+            if (event.Data.Registry.Status == 0) {
+                wprintf(L"[REGISTRY] Successfully set value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
+            }
+            else {
+                wprintf(L"[REGISTRY] Failed to set value (0x%08X): %ws\\%ws\n", event.Data.Registry.Status, event.Data.Registry.Path, event.Data.Registry.ValueName);
+            }
+            break;
+        }
+        case ERegistryPreGetValue:
+        case ERegistryPreQueryValueKey: {
+            wprintf(L"[REGISTRY] Wants to query value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
+            break;
+        }
+        case ERegistryPostGetValue:
+        case ERegistryPostQueryValueKey: {
+            if (event.Data.Registry.Status == 0) {
+                wprintf(L"[REGISTRY] Successfully queried value: %ws\\%ws", event.Data.Registry.Path, event.Data.Registry.ValueName);
+                if (event.Data.Registry.DataType == REG_DWORD) {
+                    wprintf(L" (DWORD: %lu)\n", event.Data.Registry.DwordData);
+                }
+                else if (event.Data.Registry.DataType == REG_SZ || event.Data.Registry.DataType == REG_EXPAND_SZ) {
+                    wprintf(L" (STRING: %ws)\n", event.Data.Registry.StringData);
+                }
+                else {
+                    wprintf(L" (Type: %lu, Size: %lu bytes)\n", event.Data.Registry.DataType, event.Data.Registry.DataSize);
+                }
+            }
+            else {
+                wprintf(L"[REGISTRY] Failed to query value (0x%08X): %ws\\%ws\n", event.Data.Registry.Status, event.Data.Registry.Path, event.Data.Registry.ValueName);
+            }
+            break;
+        }
+        case ERegistryPreEnumerateValue:
+        case ERegistryPreEnumerateKey: {
+            wprintf(L"[REGISTRY] Wants to enumerate (Index %lu) in: %ws\n", event.Data.Registry.DwordData, event.Data.Registry.Path);
+            break;
+        }
+        case ERegistryPostEnumerateValue:
+        case ERegistryPostEnumerateKey: {
+            if (event.Data.Registry.Status == 0) {
+                wprintf(L"[REGISTRY] Emuneration success (Index %lu): %ws\n", event.Data.Registry.DwordData, event.Data.Registry.Path);
+            }
+            else {
+                wprintf(L"[REGISTRY] Emuneration end/failed (0x%08X): %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
+            }
+            break;
+        }
+        case ERegistryPreQueryMultipleValueKey: {
+            wprintf(L"[REGISTRY] Wants to query multiple values (%lu entries) in: %ws\n", event.Data.Registry.DataSize, event.Data.Registry.Path);
+            break;
+        }
+        case ERegistryPostQueryMultipleValueKey: {
+            if (event.Data.Registry.Status == 0) {
+                wprintf(L"[REGISTRY] Successfully queried multiple values in: %ws\n", event.Data.Registry.Path);
+            }
+            else {
+                wprintf(L"[REGISTRY] Failed to query multiple values (0x%08X) in: %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
+            }
+            break;
+        }
+        case ERegistryPreCreateKey: {
+            wprintf(L"[REGISTRY] Wants to create key: %ws\n", event.Data.Registry.Path);
+            break;
+        }
+        case ERegistryPostCreateKey: {
+            if (event.Data.Registry.Status == 0) {
+                wprintf(L"[REGISTRY] Successfully created key: %ws\n", event.Data.Registry.Path);
+            }
+            else {
+                wprintf(L"[REGISTRY] Failed to create key (0x%08X): %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
+            }
+            break;
+        }
+        case ERegistryPreDeleteValue: {
+            wprintf(L"[REGISTRY] Wants to delete value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
+            break;
+        }
+        case ERegistryPostDeleteValue: {
+            if (event.Data.Registry.Status == 0) {
+                wprintf(L"[REGISTRY] Successfully deleted value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
+            }
+            else {
+                wprintf(L"[REGISTRY] Failed to delete value (0x%08X): %ws\\%ws\n", event.Data.Registry.Status, event.Data.Registry.Path, event.Data.Registry.ValueName);
+            }
+            break;
+        }
+        case ERegistryUnknown: {
+            wprintf(L"[REGISTRY] Unknown event (Action ID: %lu): %ws\n", event.Data.Registry.DwordData, event.Data.Registry.Path);
+            break;
+        }
+        default: {
+            wprintf(L"[UNKNOWN] Unrecognized Event Type ID: %d\n", event.Type);
+            break;
+        }
     }
 }
