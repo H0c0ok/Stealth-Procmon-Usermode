@@ -28,12 +28,12 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD dwCtrlType) {
 
 static bool IsAppRunningAsAdmin();
 std::wstring GetDriverDescriptorName();
+void TryStartDriverWithInfName();
 HANDLE OpenDriverDescriptor(std::wstring&);
 std::wstring GetTagetNameFromUser();
 void PrintEvent(const MONITOR_EVENT&);
 void LogEvent(const wchar_t* format, ...);
 void LoggerWorkerThread();
-
 
 int main() {
 
@@ -47,10 +47,18 @@ int main() {
     // Opening driver descriptor
     auto DriverDescriptorName = GetDriverDescriptorName();
     if (DriverDescriptorName.empty()) {
-        std::wcerr << L"[-] Failed to read: " << DEVICE_NAME_PATH << std::endl;
+        std::wcerr << L"[-] Failed to read: " << DEVICE_NAME_PATH << L"\n";
+        std::wcout << L"[?] Trying to start service as it's named in .inf file: NotProcNotMon" << L"\n";
+        TryStartDriverWithInfName();
+        }
+
+    DriverDescriptorName = GetDriverDescriptorName();
+    if (DriverDescriptorName.empty()) {
+        std::wcerr << L"[-] Failed to read: " << DEVICE_NAME_PATH << L"\n";
         system("pause");
         return 2;
     }
+    
 
     std::wcout << "[?] Device descriptor path: " << DriverDescriptorName << L" [?]\n";
 
@@ -86,7 +94,7 @@ int main() {
         system("pause");
         return 5;
     }
-
+    system("cls");
     std::wcout << L"[+] Monitoring started for: " << targetName << L"\n";
 
     PSHARED_MEMORY_BUFFER sharedBuffer = nullptr;
@@ -203,6 +211,10 @@ std::wstring GetDriverDescriptorName() {
     }
     DriverDescriptorFile.close();
     return DriverDescriptorName;
+}
+
+void TryStartDriverWithInfName() {
+    system("sc start NotProcNotMon");
 }
 
 HANDLE OpenDriverDescriptor(std::wstring& deviceName) {
