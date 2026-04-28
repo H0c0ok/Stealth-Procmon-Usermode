@@ -50,9 +50,9 @@ int main() {
         std::wcerr << L"[-] Failed to read: " << DEVICE_NAME_PATH << L"\n";
         std::wcout << L"[?] Trying to start service as it's named in .inf file: NotProcNotMon" << L"\n";
         TryStartDriverWithInfName();
-        }
-
-    DriverDescriptorName = GetDriverDescriptorName();
+        DriverDescriptorName = GetDriverDescriptorName();
+    }
+    
     if (DriverDescriptorName.empty()) {
         std::wcerr << L"[-] Failed to read: " << DEVICE_NAME_PATH << L"\n";
         system("pause");
