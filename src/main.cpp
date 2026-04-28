@@ -307,28 +307,28 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPreOpenKey: {
-            LogEvent(L"[REGISTRY] Wants to OPEN KEY: %ws\n", event.Data.Registry.Path);
+            LogEvent(L"[REGISTRY] Wants to open key: %ws\n", event.Data.Registry.Path);
             break;
         }
         case ERegistryPostOpenKey: {
             if (event.Data.Registry.Status == 0) {
-                LogEvent(L"[REGISTRY] Successfully OPENED KEY: %ws\n", event.Data.Registry.Path);
+                LogEvent(L"[REGISTRY] Successfully opened key: %ws\n", event.Data.Registry.Path);
             }
             else {
-                LogEvent(L"[REGISTRY] Failed to OPEN KEY (0x%08X): %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
+                LogEvent(L"[REGISTRY] Failed to open key (0x%08X): %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
             }
             break;
         }
         case ERegistryPreDeleteKey: {
-            LogEvent(L"[REGISTRY] Wants to DELETE KEY (Folder): %ws\n", event.Data.Registry.Path);
+            LogEvent(L"[REGISTRY] Wants to delete key (Folder): %ws\n", event.Data.Registry.Path);
             break;
         }
         case ERegistryPostDeleteKey: {
             if (event.Data.Registry.Status == 0) {
-                LogEvent(L"[REGISTRY] Successfully DELETED KEY: %ws\n", event.Data.Registry.Path);
+                LogEvent(L"[REGISTRY] Successfully deleted key: %ws\n", event.Data.Registry.Path);
             }
             else {
-                LogEvent(L"[REGISTRY] Failed to DELETE KEY (0x%08X): %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
+                LogEvent(L"[REGISTRY] Failed to delete key (0x%08X): %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
             }
             break;
         }
