@@ -332,19 +332,6 @@ void PrintEvent(const MONITOR_EVENT& event) {
             }
             break;
         }
-        case ERegistryPreEnumerateValue: {
-            LogEvent(L"[REGISTRY] Wants to ENUMERATE VALUE (Index %lu) in: %ws\n", event.Data.Registry.DwordData, event.Data.Registry.Path);
-            break;
-        }
-        case ERegistryPostEnumerateValue: {
-            if (event.Data.Registry.Status == 0) {
-                LogEvent(L"[REGISTRY] ENUMERATE VALUE success (Index %lu): %ws\n", event.Data.Registry.DwordData, event.Data.Registry.Path);
-            }
-            else {
-                LogEvent(L"[REGISTRY] ENUMERATE VALUE end/failed (0x%08X): %ws\n", event.Data.Registry.Status, event.Data.Registry.Path);
-            }
-            break;
-        }
         case ERegistryPreCreateValue: {
             LogEvent(L"[REGISTRY] Wants to create value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
             break;
