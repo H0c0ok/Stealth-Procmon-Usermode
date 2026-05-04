@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <ntdef.h>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -117,7 +118,7 @@ int main() {
     }
 
     if (_wfopen_s(&g_LogFile, L"sysmon_log.txt", L"w, ccs=UTF-8") != 0) {
-        std::wcerr << L"[-] Warning: Failed to open log file at sysmon_log.txt\n";
+        std::wcerr << L"[-] Warning: Failed to open log file sysmon_log.txt\n";
         std::wcerr << L"[?] Consider having good memory to remember all events :)\n";
     }
     else {
@@ -174,6 +175,7 @@ int main() {
     DeviceIoControl(DriverDescriptorHandle, IOCTL_UNMAP_MEMORY, NULL, 0, NULL, 0, &bytesReturned, NULL);
     std::wcout << L"[+] Closing driver handle..." << std::endl;
     CloseHandle(DriverDescriptorHandle);
+    Sleep(2);
     return 0;
 }
 
@@ -267,7 +269,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case EFilePostCreate: {
-            if (event.Data.File.Status == 0) {
+            if (NT_SUCCESS(event.Data.File.Status)) {
                 LogEvent(L"[FILE] Successfully created: %ws\n", event.Data.File.FilePath);
             }
             else {
@@ -280,7 +282,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case EFilePostOpen: {
-            if (event.Data.File.Status == 0) {
+            if (NT_SUCCESS(event.Data.File.Status)) {
                 LogEvent(L"[FILE] Successfully opened: %ws\n", event.Data.File.FilePath);
             }
             else {
@@ -293,7 +295,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case EFilePostRead: {
-            if (event.Data.File.Status == 0) {
+            if (NT_SUCCESS(event.Data.File.Status)) {
                 LogEvent(L"[FILE] Successfully read: %ws\n", event.Data.File.FilePath);
             }
             else {
@@ -306,7 +308,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case EFilePostWrite: {
-            if (event.Data.File.Status == 0) {
+            if (NT_SUCCESS(event.Data.File.Status)) {
                 LogEvent(L"[FILE] Successfully write: %ws\n", event.Data.File.FilePath);
             }
             else {
@@ -323,7 +325,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPostOpenKey: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully opened key: %ws\n", event.Data.Registry.Path);
             }
             else {
@@ -336,7 +338,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPostDeleteKey: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully deleted key: %ws\n", event.Data.Registry.Path);
             }
             else {
@@ -349,7 +351,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPostCreateValue: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully created value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
             }
             else {
@@ -371,7 +373,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPostSetValue: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully set value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
             }
             else {
@@ -386,7 +388,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
         }
         case ERegistryPostGetValue:
         case ERegistryPostQueryValueKey: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully queried value: %ws\\%ws", event.Data.Registry.Path, event.Data.Registry.ValueName);
                 if (event.Data.Registry.DataType == REG_DWORD) {
                     LogEvent(L" (DWORD: %lu)\n", event.Data.Registry.DwordData);
@@ -410,7 +412,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
         }
         case ERegistryPostEnumerateValue:
         case ERegistryPostEnumerateKey: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Emuneration success (Index %lu): %ws\n", event.Data.Registry.DwordData, event.Data.Registry.Path);
             }
             else {
@@ -423,7 +425,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPostQueryMultipleValueKey: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully queried multiple values in: %ws\n", event.Data.Registry.Path);
             }
             else {
@@ -436,7 +438,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPostCreateKey: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully created key: %ws\n", event.Data.Registry.Path);
             }
             else {
@@ -449,7 +451,7 @@ void PrintEvent(const MONITOR_EVENT& event) {
             break;
         }
         case ERegistryPostDeleteValue: {
-            if (event.Data.Registry.Status == 0) {
+            if (NT_SUCCESS(event.Data.Registry.Status)) {
                 LogEvent(L"[REGISTRY] Successfully deleted value: %ws\\%ws\n", event.Data.Registry.Path, event.Data.Registry.ValueName);
             }
             else {
